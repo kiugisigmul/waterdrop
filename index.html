@@ -1,48 +1,50 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>물주기 사이트</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      font-family: 'Arial', sans-serif;
       background-color: #f0f8ff;
-    }
-
-    .container {
-      height: 100%;
+      font-family: 'Arial', sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
     }
 
-    .card {
-      position: relative;
-      width: 100%;
-      height: 100%;
+    .container {
+      width: 100vw;
+      height: 100vh;
       max-width: 400px;
       max-height: 800px;
       background-color: white;
       border-radius: 20px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      position: relative;
       overflow: hidden;
     }
 
-    .time-image, .plant-overlay {
+    #물뿌버튼 {
       position: absolute;
-      top: 0;
+      bottom: 20px;
       left: 0;
       width: 100%;
-      height: 100%;
-      object-fit: cover;
+      height: auto;
     }
 
-    .time-image { z-index: 0; }
-    .plant-overlay { z-index: 1; pointer-events: none; }
+    #성공알림, #물다줬 {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 4;
+      display: none;
+      width: 220px;
+    }
 
     #물방울영역 {
       position: absolute;
@@ -50,8 +52,6 @@
       left: 0;
       width: 100%;
       height: 100%;
-      max-width: 400px;
-      max-height: 800px;
       z-index: 3;
       pointer-events: none;
     }
@@ -80,47 +80,11 @@
       }
     }
 
-    .button-overlay {
-      position: absolute;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      z-index: 2;
-    }
-
-    #물뿌버튼 {
-      width: 480px;
-      height: auto;
-      display: block;
-      aspect-ratio: 3 / 1;
-      object-fit: contain;
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
-
-    #물뿌버튼:active {
-      transform: scale(0.95);
-    }
-
-    .notice-image {
-      position: absolute;
-      top: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 4;
-      display: none;
-      width: 300px;
-      height: auto;
-    }
-
     #totalCountDisplay {
       position: absolute;
       top: 10px;
       left: 12px;
-      font-size: 40px;
+      font-size: 30px;
       z-index: 99;
       font-weight: bold;
       color: #a3dcff;
@@ -129,18 +93,14 @@
 </head>
 <body>
   <div class="container">
-    <div class="card">
-      <img id="timeImage" class="time-image" src="" alt="시간대 이미지" />
-      <img class="plant-overlay" src="https://i.ibb.co/dsn0Wf9M/image.png" alt="식물" />
-      <div id="물방울영역"></div>
-      <img id="물다줬" class="notice-image" src="https://i.ibb.co/WW8hZ4GH/image.png" alt="이미 물 줌" />
-      <img id="성공알림" class="notice-image" src="https://i.ibb.co/jxT5RQk/image.png" alt="물 주기 성공" />
-      <div class="button-overlay">
-        <img id="물뿌버튼" src="https://i.ibb.co/pjZWVgyb/image.png" alt="물뿌리기 버튼" />
-      </div>
-      <audio id="waterSound" src="https://files.catbox.moe/y7gz7b.mp3"></audio>
-      <div id="totalCountDisplay">0</div>
-    </div>
+    <img id="timeImage" src="" class="time-image" style="position:absolute;width:100%;height:100%;object-fit:cover;z-index:0;">
+    <img class="plant-overlay" src="https://i.ibb.co/dsn0Wf9M/image.png" alt="식물" style="position:absolute;width:100%;height:100%;object-fit:cover;z-index:1;pointer-events:none;">
+    <div id="물방울영역"></div>
+    <img id="물다줬" src="https://i.ibb.co/WW8hZ4GH/image.png" alt="이미 물 줌" />
+    <img id="성공알림" src="https://i.ibb.co/jxT5RQk/image.png" alt="물 주기 성공" />
+    <img id="물뿌버튼" src="https://i.ibb.co/pjZWVgyb/image.png" alt="물뿌리기 버튼" />
+    <audio id="waterSound" src="https://files.catbox.moe/y7gz7b.mp3"></audio>
+    <div id="totalCountDisplay">0</div>
   </div>
 
   <script type="module">
@@ -172,7 +132,10 @@
 
     function getTodayString() {
       const today = new Date();
-      return `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
     }
 
     function updateTimeImage() {
@@ -202,35 +165,39 @@
     });
 
     button.addEventListener("click", async () => {
+      const lastClick = localStorage.getItem("LastClickDate");
+      const today = getTodayString();
+
+      if (lastClick === today) {
+        noticeAlready.style.display = "block";
+        setTimeout(() => { noticeAlready.style.display = "none"; }, 2000);
+        return;
+      }
+
       try {
-        const today = getTodayString();
         const ipData = await fetch("https://api.ipify.org?format=json").then(res => res.json());
         const ip = ipData.ip.replace(/\./g, "_");
         const ipRef = child(ref(db), `ipLogs/${ip}`);
-
         const ipSnap = await get(ipRef);
+
         if (ipSnap.exists() && ipSnap.val() === today) {
           noticeAlready.style.display = "block";
-          setTimeout(() => {
-            noticeAlready.style.display = "none";
-          }, 2000);
+          setTimeout(() => { noticeAlready.style.display = "none"; }, 2000);
           return;
         }
 
-        // 물주기 성공
         createDrop();
         waterSound.play();
         noticeSuccess.style.display = "block";
-        setTimeout(() => {
-          noticeSuccess.style.display = "none";
-        }, 2000);
+        setTimeout(() => { noticeSuccess.style.display = "none"; }, 2000);
 
         const snapshot = await get(countRef);
         const current = snapshot.exists() ? snapshot.val() : 0;
         await set(countRef, current + 1);
         await set(ipRef, today);
+        localStorage.setItem("LastClickDate", today);
       } catch (err) {
-        console.error("클릭 처리 오류:", err);
+        console.error("클릭 오류", err);
       }
     });
 
