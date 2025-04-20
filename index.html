@@ -125,9 +125,11 @@
     <div id="totalCountDisplay">0</div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-    import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+  <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js"></script>
+<script>
+    
+    
 
     const firebaseConfig = {
       apiKey: "AIzaSyBCuDyKgkDVwptjsQ_sepxq2WylrQWd8ok",
@@ -139,8 +141,8 @@
       appId: "1:16714972126:web:fc40119945f5e0844d7b4f"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
     const countRef = ref(db, "totalCount");
 
     const button = document.getElementById("물뿌버튼");
