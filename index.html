@@ -1,37 +1,31 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>물주기 사이트</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      background-color: #eaf6ff;
-      font-family: 'Arial', sans-serif;
       height: 100%;
-      overflow: hidden;
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background-color: #f0f8ff;
     }
 
     .container {
+      height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100dvh;
     }
 
     .card {
       position: relative;
-      width: 100%;
-      max-width: 400px;
-      height: 100%;
-      max-height: 800px;
+      width: 300px;
+      height: 600px;
       background-color: white;
       border-radius: 20px;
-      overflow: hidden;
       box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      overflow: hidden;
     }
 
     .time-image, .plant-overlay {
@@ -43,21 +37,15 @@
       object-fit: cover;
     }
 
-    .plant-overlay {
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    .time-image {
-      z-index: 0;
-    }
+    .time-image { z-index: 0; }
+    .plant-overlay { z-index: 1; pointer-events: none; }
 
     #물방울영역 {
       position: absolute;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
+      width: 300px;
+      height: 600px;
       z-index: 3;
       pointer-events: none;
     }
@@ -89,15 +77,15 @@
     .button-overlay {
       position: absolute;
       bottom: 20px;
-      left: 0;
-      width: 100%;
-      text-align: center;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 2;
+      width: 92%;
     }
 
     #물뿌버튼 {
-      width: 90%;
-      max-width: 360px;
+      width: 100%;
+      height: auto;
       cursor: pointer;
       transition: transform 0.1s;
     }
@@ -115,16 +103,6 @@
       display: none;
       width: 220px;
     }
-
-    #totalCountDisplay {
-      position: absolute;
-      top: 10px;
-      left: 12px;
-      font-size: 30px;
-      font-weight: bold;
-      color: #a3dcff;
-      z-index: 99;
-    }
   </style>
 </head>
 <body>
@@ -139,7 +117,6 @@
         <img id="물뿌버튼" src="https://i.ibb.co/pjZWVgyb/image.png" alt="물뿌리기 버튼" />
       </div>
       <audio id="waterSound" src="https://files.catbox.moe/y7gz7b.mp3"></audio>
-      <div id="totalCountDisplay">0</div>
     </div>
   </div>
 
@@ -160,64 +137,82 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     const countRef = ref(db, "totalCount");
-    const getToday = () => {
-      const today = new Date();
-      return `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-    };
 
-    const display = document.getElementById("totalCountDisplay");
-    const btn = document.getElementById("물뿌버튼");
-    const waterSound = document.getElementById("waterSound");
-    const noticeSuccess = document.getElementById("성공알림");
-    const noticeAlready = document.getElementById("물다줬");
-    const dropArea = document.getElementById("물방울영역");
-    const timeImage = document.getElementById("timeImage");
+    window.addEventListener("DOMContentLoaded", () => {
+      const button = document.getElementById("물뿌버튼");
+      const noticeAlready = document.getElementById("물다줬");
+      const noticeSuccess = document.getElementById("성공알림");
+      const waterSound = document.getElementById("waterSound");
+      const timeImage = document.getElementById("timeImage");
+      const dropArea = document.getElementById("물방울영역");
 
-    function updateTimeImage() {
-      const hour = new Date().getHours();
-      if (hour >= 6 && hour < 9) timeImage.src = "https://i.ibb.co/j9tjPRLR/image.png";
-      else if (hour >= 9 && hour < 17) timeImage.src = "https://i.ibb.co/W40tb97w/image.png";
-      else if (hour >= 17 && hour < 20) timeImage.src = "https://i.ibb.co/j9tjPRLR/image.png";
-      else timeImage.src = "https://i.ibb.co/VpPc6gW0/image.png";
-    }
+      const counter = document.createElement("div");
+      counter.id = "totalCountDisplay";
+      counter.style.position = "absolute";
+      counter.style.top = "10px";
+      counter.style.left = "12px";
+      counter.style.fontSize = "30px";
+      counter.style.zIndex = "99";
+      counter.style.fontWeight = "bold";
+      counter.style.color = "#a3dcff";
+      document.querySelector(".card").appendChild(counter);
 
-    function createDrop() {
-      const drop = document.createElement("img");
-      drop.src = "https://i.postimg.cc/dQWRcKBW/01.png";
-      drop.className = "drop";
-      dropArea.appendChild(drop);
-      drop.addEventListener("animationend", () => drop.remove());
-    }
+      onValue(countRef, (snapshot) => {
+        const count = snapshot.val() ?? 0;
+        counter.textContent = count;
+      });
 
-    onValue(countRef, (snap) => {
-      display.textContent = snap.val() ?? 0;
-    });
-
-    btn.addEventListener("click", async () => {
-      createDrop();
-      waterSound.play();
-
-      const ip = await fetch("https://api.ipify.org").then(res => res.text());
-      const ipRef = ref(db, `ipLogs/${ip}`);
-      const snap = await get(ipRef);
-
-      const today = getToday();
-      if (!snap.exists() || snap.val() !== today) {
-        noticeSuccess.style.display = "block";
-        setTimeout(() => noticeSuccess.style.display = "none", 2000);
-        set(ipRef, today);
-        const cSnap = await get(countRef);
-        const current = cSnap.exists() ? cSnap.val() : 0;
-        set(countRef, current + 1);
-      } else {
-        noticeAlready.style.display = "block";
-        setTimeout(() => noticeAlready.style.display = "none", 2000);
+      function getTodayString() {
+        const today = new Date();
+        return `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
       }
-    });
 
-    updateTimeImage();
+      function updateTimeImage() {
+        const hour = new Date().getHours();
+        if (hour >= 6 && hour < 9) {
+          timeImage.src = "https://i.ibb.co/j9tjPRLR/image.png";
+        } else if (hour >= 9 && hour < 17) {
+          timeImage.src = "https://i.ibb.co/W40tb97w/image.png";
+        } else if (hour >= 17 && hour < 20) {
+          timeImage.src = "https://i.ibb.co/j9tjPRLR/image.png";
+        } else {
+          timeImage.src = "https://i.ibb.co/VpPc6gW0/image.png";
+        }
+      }
+
+      function createDrop() {
+        const drop = document.createElement("img");
+        drop.src = "https://i.postimg.cc/dQWRcKBW/01.png";
+        drop.className = "drop";
+        dropArea.appendChild(drop);
+        drop.addEventListener("animationend", () => drop.remove());
+      }
+
+      button.addEventListener("click", async () => {
+        const lastClick = localStorage.getItem("LastClickDate");
+        const today = getTodayString();
+
+        if (lastClick === today) {
+          noticeAlready.style.display = "block";
+          setTimeout(() => { noticeAlready.style.display = "none"; }, 2000);
+          return;
+        }
+
+        localStorage.setItem("LastClickDate", today);
+        noticeSuccess.style.display = "block";
+        setTimeout(() => { noticeSuccess.style.display = "none"; }, 2000);
+
+        const snapshot = await get(countRef);
+        const current = snapshot.exists() ? snapshot.val() : 0;
+        set(countRef, current + 1);
+
+        createDrop();
+        waterSound.play();
+      });
+
+      updateTimeImage();
+    });
   </script>
 </body>
 </html>
